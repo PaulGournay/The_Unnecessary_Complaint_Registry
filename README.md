@@ -29,5 +29,7 @@ npm run dev
 ## 🧪 Example Accounts
 
 Paul – complainer --> password : 1234
+
 Sam – complainer --> password : 1234
+
 admin – archivist --> password : 1234
