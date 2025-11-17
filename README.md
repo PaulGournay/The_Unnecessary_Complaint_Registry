@@ -3,48 +3,26 @@
 A small web app for collecting extremely specific and mildly ridiculous complaints.
 Built for fun, learning, and because overly-specific annoyances deserve a home.
 
-🚀 Features
 
-Submit a complaint with title, details, and category
-
-User accounts (complainers + archivist role)
-
-Category filtering
-
-Example data included
-
-🛠️ Setup
+## 🛠️ Setup
 1. Import the Database
 
-The SQL file is in:
-
-client/src/assets/complaint_registry.sql
-
-
-In XAMPP:
-
-Start Apache + MySQL
-
-Go to phpMyAdmin
-
-Create a database named complaint_registry
-
-Import the SQL file
-
-The file includes example users, categories, and complaints.
+The SQL file is in: "client/src/assets/complaint_registry.sql"
+In XAMPP: 
+a.Start Apache + MySQL
+b.Go to phpMyAdmin
+c.Create a database named complaint_registry
+d.Import the SQL file-->The file includes example users, categories, and complaints.
 
 2. Run the Client
+   
 cd client
 npm install
-npm run dev
+npm run dev--> in root directory
 
 
-(Adjust based on your project.)
+## 🧪 Example Accounts
 
-🧪 Example Accounts
-
-Paul – complainer
-
-Sam – complainer
-
-admin – archivist
+Paul – complainer --> password : 1234
+Sam – complainer --> password : 1234
+admin – archivist --> password : 1234
