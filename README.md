@@ -17,7 +17,9 @@ d.Import the SQL file-->The file includes example users, categories, and complai
 2. Install all necessary module (in cmd)
 
 npm install
+
 cd client && npm install && cd ..
+
 cd server && npm install && cd ..
    
 3. Run the project
