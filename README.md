@@ -8,10 +8,15 @@ Built for fun, learning, and because overly-specific annoyances deserve a home.
 1. Import the Database
 
 The SQL file is in: "client/src/assets/complaint_registry.sql"
+
 In XAMPP: 
+
 a.Start Apache + MySQL
+
 b.Go to phpMyAdmin
+
 c.Create a database named complaint_registry
+
 d.Import the SQL file-->The file includes example users, categories, and complaints.
 
 2. Install all necessary module (in cmd)
