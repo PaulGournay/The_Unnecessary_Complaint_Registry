@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : lun. 17 nov. 2025 à 05:02
+-- Généré le : jeu. 27 nov. 2025 à 03:00
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -62,8 +62,10 @@ CREATE TABLE `complaints` (
 --
 
 INSERT INTO `complaints` (`id`, `title`, `detail`, `specificity_score`, `category_id`, `user_id`, `created_at`) VALUES
-(1, 'The Refrigerator Rumble-Stutter', 'The loud, low-frequency hum of the refrigerator\'s compressor that starts up, runs for exactly 7 seconds, and then cuts out suddenly, only to start up again 3 seconds later at an even louder volume, having failed to commit to running or being silent the first time.', 3, 1, 1, '2025-11-17 02:24:37'),
-(2, 'The Thumbprint Traitor', 'Description: After cleaning your phone screen to crystal clarity, you immediately manage to touch the glass with the one finger that is slightly greasy, leaving a perfect, unmistakable spiral-shaped fingerprint that catches the light right over the clock widget.', 0, 3, 1, '2025-11-17 02:28:38');
+(2, 'The Thumbprint Traitor', 'Description: After cleaning your phone screen to crystal clarity, you immediately manage to touch the glass with the one finger that is slightly greasy, leaving a perfect, unmistakable spiral-shaped fingerprint that catches the light right over the clock widget.', 51, 3, 1, '2025-11-17 02:28:38'),
+(3, 'verv', 'ezrvzer', 7, 1, 1, '2025-11-18 09:05:25'),
+(4, 'dezdze', 'dzedez', 48, 1, 1, '2025-11-18 09:10:11'),
+(5, 'dcZE', 'qddzd', 0, 2, 1, '2025-11-18 09:10:34');
 
 -- --------------------------------------------------------
 
@@ -75,17 +77,18 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `username` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('complainer','archivist') NOT NULL DEFAULT 'complainer'
+  `role` enum('complainer','archivist') NOT NULL DEFAULT 'complainer',
+  `pfp` varchar(50) DEFAULT 'pfp1.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `role`) VALUES
-(1, 'Paul', '$2b$10$T/TneC6m8wTGAdOWgzxwQeHSXLtOXHc6ee93hbY4tpKpTeWarGbTW', 'complainer'),
-(2, 'admin', '$2b$10$yx71JtWeMZt.eshZiJPmkOmP5U4fhmKq/E33KJt5OaH9QjTaeYFIS', 'archivist'),
-(3, 'Sam', '$2b$10$Ux9g761MpXMXR2RuHqwYg.qqoMkB/uPyGxZviFxSXlypIOk7Dom2u', 'complainer');
+INSERT INTO `users` (`id`, `username`, `password`, `role`, `pfp`) VALUES
+(1, 'Paul', '$2b$10$T/TneC6m8wTGAdOWgzxwQeHSXLtOXHc6ee93hbY4tpKpTeWarGbTW', 'complainer', 'pfp4.jpeg'),
+(2, 'admin', '$2b$10$yx71JtWeMZt.eshZiJPmkOmP5U4fhmKq/E33KJt5OaH9QjTaeYFIS', 'archivist', 'pfp1.jpeg'),
+(3, 'Sam', '$2b$10$Ux9g761MpXMXR2RuHqwYg.qqoMkB/uPyGxZviFxSXlypIOk7Dom2u', 'complainer', 'pfp3.png');
 
 --
 -- Index pour les tables déchargées
@@ -127,7 +130,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT pour la table `complaints`
 --
 ALTER TABLE `complaints`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT pour la table `users`
