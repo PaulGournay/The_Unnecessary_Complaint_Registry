@@ -172,6 +172,13 @@ export default {
 
 <style>
 /* --- Global Reset & Font --- */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
 #app {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
@@ -180,6 +187,7 @@ export default {
   background-color: #f2f2f7; /* iOS Grouped Background */
   min-height: 100vh;
 }
+
 
 /* --- Glassmorphic Header --- */
 .app-header {

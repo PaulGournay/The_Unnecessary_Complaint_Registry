@@ -1,12 +1,37 @@
 <template>
-  <div class="login-container">
-    <h2>User Login</h2>
-    <form @submit.prevent="handleLogin">
-      <input v-model="username" placeholder="Username" required />
-      <input v-model="password" type="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-      <p v-if="message" :class="{ success: !error, error: error }">{{ message }}</p>
-    </form>
+  <div class="login-wrapper">
+    <div class="ios-card login-card">
+      <div class="card-header">
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Sign in to access the registry</p>
+      </div>
+
+      <form @submit.prevent="handleLogin" class="ios-form">
+        <div class="input-group">
+          <input 
+            v-model="username" 
+            placeholder="Username" 
+            class="ios-input" 
+            required 
+          />
+          <input 
+            v-model="password" 
+            type="password" 
+            placeholder="Password" 
+            class="ios-input" 
+            required 
+          />
+        </div>
+        
+        <button type="submit" class="ios-btn-primary">Log In</button>
+        
+        <transition name="fade">
+          <p v-if="message" :class="['status-msg', { success: !error, error: error }]">
+            {{ message }}
+          </p>
+        </transition>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -15,7 +40,7 @@ import axios from "axios";
 
 export default {
   name: "UserLogin",
-  emits: ["loggedin"],
+  emits: ["login-success"], // Fixed: matched the event name used in App.vue
   data() {
     return {
       username: "",
@@ -35,10 +60,11 @@ export default {
           password: this.password,
         });
 
-        this.message = response.data.message + " Redirecting...";
+        this.message = "Success! Redirecting...";
+        // Emit 'login-success' to match App.vue listener
         setTimeout(() => {
           this.$emit("login-success", response.data);
-        }, 1500);
+        }, 1000);
       } catch (err) {
         this.error = true;
         this.message = err.response
@@ -52,27 +78,117 @@ export default {
 </script>
 
 <style scoped>
-.login-container {
-  max-width: 300px;
-  margin: 0 auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+/* Wrapper to center content */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  padding-top: 60px;
+  padding-bottom: 60px;
 }
-input {
-  display: block;
+
+/* iOS Card Style */
+.ios-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
+  max-width: 380px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+/* Typography */
+.card-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1c1c1e;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: #8e8e93;
+  font-size: 15px;
+}
+
+/* Inputs */
+.ios-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ios-input {
+  width: 100%;
+  padding: 16px;
+  background-color: #f2f2f7; /* iOS Input Background */
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 17px;
+  color: #1c1c1e;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 }
-button {
-  padding: 10px 20px;
+
+.ios-input:focus {
+  background-color: #ffffff;
+  border-color: #007aff;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
 }
-.success {
-  color: green;
+
+.ios-input::placeholder {
+  color: #aeaeb2;
 }
-.error {
-  color: red;
+
+/* Button */
+.ios-btn-primary {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.2s;
+  width: 100%;
+}
+
+.ios-btn-primary:active {
+  background-color: #005ecb;
+  transform: scale(0.98);
+}
+
+/* Status Messages */
+.status-msg {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+.success { color: #34c759; }
+.error { color: #ff3b30; }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>
