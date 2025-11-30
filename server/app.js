@@ -149,15 +149,13 @@ app.post("/api/login", async (req, res) => {
 // READ all complaints (including category and user info)
 app.get("/api/complaints", async (req, res) => {
   try {
-    // We added 'u.pfp AS complainer_pfp' to this query
+    // Removed JOIN categories, added c.category
     const query = `
             SELECT 
-                c.id, c.title, c.detail, c.specificity_score, c.created_at,
-                cat.name AS category_name,
+                c.id, c.title, c.detail, c.specificity_score, c.category, c.created_at,
                 u.username AS complainer_name, u.id AS complainer_id,
                 u.pfp AS complainer_pfp
             FROM complaints c
-            JOIN categories cat ON c.category_id = cat.id
             JOIN users u ON c.user_id = u.id
             ORDER BY c.specificity_score DESC, c.created_at DESC
         `;
@@ -183,16 +181,16 @@ app.get("/api/users", async (req, res) => {
 // INSERT a new complaint (Complainer/Authenticated)
 app.post("/api/complaints", authenticateToken, async (req, res) => {
   try {
-    const { title, detail, category_id } = req.body;
-    const user_id = req.user.id; // Get user ID from the JWT payload
+    const { title, detail, category } = req.body; // Changed category_id to category
+    const user_id = req.user.id;
 
-    if (!title || !detail || !category_id) {
+    if (!title || !detail || !category) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
     const [result] = await dbPool.query(
-      "INSERT INTO complaints (title, detail, category_id, user_id) VALUES (?, ?, ?, ?)",
-      [title, detail, category_id, user_id]
+      "INSERT INTO complaints (title, detail, category, user_id) VALUES (?, ?, ?, ?)",
+      [title, detail, category, user_id]
     );
 
     res.status(201).json({
@@ -251,10 +249,10 @@ app.put("/api/complaints/reset/:id", authenticateToken, async (req, res) => {
 app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
-    const { title, detail, category_id } = req.body;
+    const { title, detail, category } = req.body; // Changed category_id to category
     const user_id = req.user.id;
 
-    // 1. Check if the complaint belongs to the user
+    // 1. Check permissions
     const [complaint] = await dbPool.query(
       "SELECT user_id FROM complaints WHERE id = ?",
       [id]
@@ -267,8 +265,8 @@ app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
 
     // 2. Perform the update
     await dbPool.query(
-      "UPDATE complaints SET title=?, detail=?, category_id=? WHERE id=?",
-      [title, detail, category_id, id]
+      "UPDATE complaints SET title=?, detail=?, category=? WHERE id=?",
+      [title, detail, category, id]
     );
     res.json({ message: "Complaint updated successfully." });
   } catch (error) {
@@ -335,21 +333,6 @@ app.delete(
     }
   }
 );
-
-// --- CATEGORY READ ROUTE ---
-
-// READ all categories
-app.get("/api/categories", async (req, res) => {
-  try {
-    const [categories] = await dbPool.query(
-      "SELECT * FROM categories ORDER BY name"
-    );
-    res.json(categories);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching categories." });
-  }
-});
 
 // Start the server
 app.listen(port, () => {
