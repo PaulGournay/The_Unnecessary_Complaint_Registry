@@ -3,6 +3,9 @@
     <h2>Register a New User</h2>
     <form @submit.prevent="handleRegister">
       <input v-model="username" placeholder="Username" required />
+      
+      <input v-model="email" type="email" placeholder="Email Address" required />
+      
       <input v-model="password" type="password" placeholder="Password" required />
       <p>By default, you will be a **Complainer**.</p>
       <p>
@@ -23,6 +26,7 @@ export default {
   data() {
     return {
       username: "",
+      email: "", // Initialize email
       password: "",
       message: "",
       error: false,
@@ -33,12 +37,12 @@ export default {
       this.message = "";
       this.error = false;
 
-      // Determine role for the server (basic prototype logic)
       const role = this.username.toLowerCase() === "admin" ? "archivist" : "complainer";
 
       try {
         const response = await axios.post("http://localhost:3000/api/register", {
           username: this.username,
+          email: this.email, // Send email
           password: this.password,
           role: role,
         });
@@ -59,6 +63,7 @@ export default {
 </script>
 
 <style scoped>
+/* Keep existing styles */
 .register-container {
   max-width: 300px;
   margin: 0 auto;
@@ -76,10 +81,6 @@ input {
 button {
   padding: 10px 20px;
 }
-.success {
-  color: green;
-}
-.error {
-  color: red;
-}
+.success { color: green; }
+.error { color: red; }
 </style>

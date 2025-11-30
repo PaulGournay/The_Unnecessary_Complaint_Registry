@@ -25,6 +25,11 @@
         </div>
 
         <div class="form-group">
+          <label>Email Address</label>
+          <input v-model="email" type="email" required />
+        </div>
+
+        <div class="form-group">
           <label>Role</label>
           <input :value="user.role" disabled class="disabled-input" />
           <small>Roles cannot be changed here.</small>
@@ -40,9 +45,6 @@
 
 <script>
 import axios from "axios";
-
-// Import the images explicitly so Vue includes them in the build
-// Note: Ensure your folder is named exactly 'pfp_image' inside assets
 import pfp1 from "@/assets/pfp_image/pfp1.jpeg";
 import pfp2 from "@/assets/pfp_image/pfp2.jpeg";
 import pfp3 from "@/assets/pfp_image/pfp3.jpeg";
@@ -54,25 +56,23 @@ export default {
   emits: ["user-updated"],
   data() {
     return {
-      // Map the filenames to the imported objects
       pfpMap: {
         "pfp1.jpeg": pfp1,
         "pfp2.jpeg": pfp2,
         "pfp3.jpeg": pfp3,
         "pfp4.jpeg": pfp4,
       },
-      // The list of options to iterate over
       pfpOptions: ["pfp1.jpeg", "pfp2.jpeg", "pfp3.jpeg", "pfp4.jpeg"],
 
       selectedPfp: this.user.pfp || "pfp1.jpeg",
       username: this.user.username,
+      email: this.user.email, // Initialize with current email
       message: "",
       error: false,
     };
   },
   methods: {
     getImgUrl(name) {
-      // Return the imported image from the map
       return this.pfpMap[name] || this.pfpMap["pfp1.jpeg"];
     },
     async updateProfile() {
@@ -84,7 +84,7 @@ export default {
           "http://localhost:3000/api/users/profile",
           {
             username: this.username,
-            // Password is no longer sent
+            email: this.email, // Send updated email
             pfp: this.selectedPfp,
           },
           {

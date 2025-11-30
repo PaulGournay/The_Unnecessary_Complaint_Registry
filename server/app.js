@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const mysql = require("mysql2/promise"); // Using promise-based for async/await
+const mysql = require("mysql2/promise");
 
 const app = express();
 const port = 3000;
@@ -73,21 +73,19 @@ function archivistOnly(req, res, next) {
 // Registration
 app.post("/api/register", async (req, res) => {
   try {
-    const { username, password, role } = req.body;
-    // Basic validation
-    if (!username || !password) {
+    const { username, password, role, email } = req.body; // Added email
+
+    // Validate email is present
+    if (!username || !password || !email) {
       return res
         .status(400)
-        .json({ message: "Username and password are required." });
+        .json({ message: "Username, email, and password are required." });
     }
 
-    // Ensure role is either 'complainer' or 'archivist', default to 'complainer'
     const userRole =
       role === "archivist" && username === "admin" ? "archivist" : "complainer";
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Check if username exists
     const [existing] = await dbPool.query(
       "SELECT id FROM users WHERE username = ?",
       [username]
@@ -96,9 +94,10 @@ app.post("/api/register", async (req, res) => {
       return res.status(409).json({ message: "Username already exists." });
     }
 
+    // Insert with email
     await dbPool.query(
-      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-      [username, hashedPassword, userRole]
+      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+      [username, email, hashedPassword, userRole]
     );
 
     res.status(201).json({ message: "Registration successful!" });
@@ -112,15 +111,13 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    // Fetch PFP as well
     const [rows] = await dbPool.query(
       "SELECT * FROM users WHERE username = ?",
       [username]
     );
-    if (rows.length === 0) {
+
+    if (rows.length === 0)
       return res.status(404).json({ message: "User not found." });
-    }
 
     const user = rows[0];
     if (await bcrypt.compare(password, user.password)) {
@@ -128,11 +125,13 @@ app.post("/api/login", async (req, res) => {
       res.json({
         message: "Login successful!",
         token: token,
+        // Send email to frontend here
         user: {
           id: user.id,
           username: user.username,
           role: user.role,
           pfp: user.pfp,
+          email: user.email,
         },
       });
     } else {
@@ -253,18 +252,20 @@ app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
 // UPDATE User Profile
 app.put("/api/users/profile", authenticateToken, async (req, res) => {
   try {
-    const { username, pfp } = req.body;
+    const { username, pfp, email } = req.body; // Added email
     const userId = req.user.id;
 
-    // We only update username and pfp now. Password logic is removed.
-    const query = "UPDATE users SET username = ?, pfp = ? WHERE id = ?";
-    const params = [username, pfp, userId];
+    // Update query includes email now
+    const query =
+      "UPDATE users SET username = ?, email = ?, pfp = ? WHERE id = ?";
+    const params = [username, email, pfp, userId];
 
     await dbPool.query(query, params);
 
     res.json({
       message: "Profile updated successfully",
-      user: { id: userId, username, role: req.user.role, pfp },
+      // Return updated user object
+      user: { id: userId, username, role: req.user.role, pfp, email },
     });
   } catch (error) {
     console.error("Profile update error:", error);

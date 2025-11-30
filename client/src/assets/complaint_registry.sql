@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : jeu. 27 nov. 2025 à 03:00
+-- Généré le : dim. 30 nov. 2025 à 07:47
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -78,17 +78,18 @@ CREATE TABLE `users` (
   `username` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('complainer','archivist') NOT NULL DEFAULT 'complainer',
-  `pfp` varchar(50) DEFAULT 'pfp1.png'
+  `pfp` varchar(50) DEFAULT 'pfp1.jpeg',
+  `email` varchar(255) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `role`, `pfp`) VALUES
-(1, 'Paul', '$2b$10$T/TneC6m8wTGAdOWgzxwQeHSXLtOXHc6ee93hbY4tpKpTeWarGbTW', 'complainer', 'pfp4.jpeg'),
-(2, 'admin', '$2b$10$yx71JtWeMZt.eshZiJPmkOmP5U4fhmKq/E33KJt5OaH9QjTaeYFIS', 'archivist', 'pfp1.jpeg'),
-(3, 'Sam', '$2b$10$Ux9g761MpXMXR2RuHqwYg.qqoMkB/uPyGxZviFxSXlypIOk7Dom2u', 'complainer', 'pfp3.png');
+INSERT INTO `users` (`id`, `username`, `password`, `role`, `pfp`, `email`) VALUES
+(1, 'Paul', '$2b$10$T/TneC6m8wTGAdOWgzxwQeHSXLtOXHc6ee93hbY4tpKpTeWarGbTW', 'complainer', 'pfp4.jpeg', 'paul1@gmail.com'),
+(2, 'admin', '$2b$10$yx71JtWeMZt.eshZiJPmkOmP5U4fhmKq/E33KJt5OaH9QjTaeYFIS', 'archivist', 'pfp1.jpeg', 'admin@complaint_registry.com'),
+(3, 'Sam', '$2b$10$Ux9g761MpXMXR2RuHqwYg.qqoMkB/uPyGxZviFxSXlypIOk7Dom2u', 'complainer', 'pfp3.jpeg', 'sam@gmail.com');
 
 --
 -- Index pour les tables déchargées
