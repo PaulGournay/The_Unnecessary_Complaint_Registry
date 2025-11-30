@@ -2,6 +2,7 @@
   <div class="complaint-list">
 
     <div v-if="user.role === 'archivist'" class="list_user">
+        <h2 class="list_user_title">User List : </h2>
         <div v-for="person in users" :key="person.id">
           <img :src="getImgUrl(person.pfp)" alt="PFP" />
           <p>{{ person.username }}</p>
@@ -10,13 +11,6 @@
       </div>
 
     <div class="search-and-form">
-      <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
-        <input v-model="searchQuery" placeholder="Search complaints..." class="search-input" />
-      </div>
-
-      
-
       <div v-if="user.role === 'complainer'" class="new-complaint-form">
         <h3>Submit a New Overly Specific Complaint</h3>
         <form @submit.prevent="submitComplaint">
@@ -37,7 +31,11 @@
       </div>
     </div>
 
-    <h2>The Registry (Sorted by Specificity)</h2>
+    <h2>The Registry</h2>
+    <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input v-model="searchQuery" placeholder="Search complaints..." class="search-input" />
+    </div>
 
     <div
       v-for="complaint in filteredComplaints"
@@ -503,12 +501,14 @@ export default {
   background: transparent; color: #8e8e93; border: none; cursor: pointer;
 }
 
-/* Archivist User List (Reused previous styles) */
+.list_user_title{
+  margin-bottom: 0px;
+}
 .list_user {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 60px;
 }
 .list_user > div {
   background: white;
