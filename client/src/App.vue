@@ -207,14 +207,12 @@ body, html {
   top: 0;
   z-index: 1000;
 }
-
 .header-left {
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
 }
-
 .header-logo {
   height: 120px;
   width: 120px;
@@ -347,7 +345,9 @@ body, html {
   font-weight: 600;
   text-transform: uppercase;
 }
-
+.content.flex-1 {
+    margin-top: 30px;
+}
 /* --- Mobile --- */
 @media (max-width: 768px) {
   .app-header {
@@ -365,4 +365,6 @@ body, html {
     font-size: 18px;
   }
 }
+
+
 </style>

@@ -59,7 +59,15 @@
       </div>
 
       <div class="card-footer">
-        <span class="score-badge">Specificity: {{ complaint.specificity_score }}</span>
+        <span class="score-badge">Votes : {{ complaint.specificity_score }}</span>
+          <button 
+            v-if="user.role === 'complainer'" 
+            @click="downvoteComplaint(complaint)" 
+            class="icon-btn upvote-btn"
+            title="Downvote"
+          >
+            ▼ Downvote
+          </button>
 
           <button 
             v-if="user.role === 'complainer'" 
@@ -211,6 +219,15 @@ export default {
         this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
       } catch (error) {
         alert("Failed to upvote complaint.");
+      }
+    },
+    async downvoteComplaint(complaint) {
+      try {
+        await this.api.put(`/complaints/downvote/${complaint.id}`);
+        complaint.specificity_score--;
+        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
+      } catch (error) {
+        alert("Failed to downvote complaint.");
       }
     },
     async resetVote(complaint){

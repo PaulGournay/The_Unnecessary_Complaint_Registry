@@ -8,7 +8,8 @@ const mysql = require("mysql2/promise");
 
 const app = express();
 const port = 3000;
-const secretKey = "super-specific-complaint-secret"; // CHANGE THIS!
+const secretKey =
+  "pUrSrRoUH78bj7NkGf0b0nOtqgvvMytdjAqZ8s6db8YG9B59zvtLuLK60wA5tRJuKEEj32PF9n9ZoxBaMw6g79"; //generated using jwtsecretkeygenerator.com
 
 // Middleware
 app.use(cors());
@@ -219,18 +220,32 @@ app.put("/api/complaints/upvote/:id", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Error upvoting complaint." });
   }
 });
+app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Simple increment
+    await dbPool.query(
+      "UPDATE complaints SET specificity_score = specificity_score - 1 WHERE id = ?",
+      [id]
+    );
+    res.json({ message: "Specificity score updated." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error upvoting complaint." });
+  }
+});
 
 app.put("/api/complaints/reset/:id", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     const query = "UPDATE complaints SET specificity_score = 0 WHERE id = ?";
     await dbPool.query(query, [id]);
-    res.json({message: "Specificity score reset. "});
+    res.json({ message: "Specificity score reset. " });
   } catch (error) {
     console.error(error);
-    res.status(500).json({message: "Error resetting score. "});
+    res.status(500).json({ message: "Error resetting score. " });
   }
-})
+});
 
 // UPDATE a user's own complaint (Complainer/Authenticated)
 app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
