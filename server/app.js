@@ -149,11 +149,13 @@ app.post("/api/login", async (req, res) => {
 // READ all complaints (including category and user info)
 app.get("/api/complaints", async (req, res) => {
   try {
+    // We added 'u.pfp AS complainer_pfp' to this query
     const query = `
             SELECT 
                 c.id, c.title, c.detail, c.specificity_score, c.created_at,
                 cat.name AS category_name,
-                u.username AS complainer_name, u.id AS complainer_id
+                u.username AS complainer_name, u.id AS complainer_id,
+                u.pfp AS complainer_pfp
             FROM complaints c
             JOIN categories cat ON c.category_id = cat.id
             JOIN users u ON c.user_id = u.id
@@ -168,7 +170,7 @@ app.get("/api/complaints", async (req, res) => {
 });
 
 app.get("/api/users", async (req, res) => {
-  try{
+  try {
     const query = `SELECT id, username, pfp FROM users WHERE username != "admin"`;
     const [users] = await dbPool.query(query);
     res.json(users);
@@ -176,7 +178,7 @@ app.get("/api/users", async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Error fetching users." });
   }
-})
+});
 
 // INSERT a new complaint (Complainer/Authenticated)
 app.post("/api/complaints", authenticateToken, async (req, res) => {
@@ -303,7 +305,7 @@ app.delete(
       res.status(500).json({ message: "Error banning user." });
     }
   }
-)
+);
 
 // --- CATEGORY READ ROUTE ---
 
