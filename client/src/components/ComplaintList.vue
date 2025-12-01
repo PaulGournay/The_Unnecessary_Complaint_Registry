@@ -1,164 +1,216 @@
 <template>
   <div class="complaint-list">
-    <div class="search-and-form">
-      <input v-model="searchQuery" placeholder="Search complaints..." />
 
+    <div v-if="user.role === 'archivist'" class="list_user">
+        <h2 class="list_user_title">User List : </h2>
+        <div v-for="person in users" :key="person.id">
+          <img :src="getImgUrl(person.pfp)" alt="PFP" />
+          <p>{{ person.username }}</p>
+          <button @click="banUser(person.id)" class="icon-btn delete-btn">BAN</button>
+        </div>
+    </div>
+
+    <div class="search-and-form">
       <div v-if="user.role === 'complainer'" class="new-complaint-form">
         <h3>Submit a New Overly Specific Complaint</h3>
         <form @submit.prevent="submitComplaint">
           <input v-model="newComplaint.title" placeholder="Complaint Title" required />
-          <textarea v-model="newComplaint.detail" placeholder="Be extremely specific..." required></textarea>
-          <select v-model="newComplaint.category_id" required>
-            <option disabled value="">Select a Category</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
-          <button type="submit">Register Complaint</button>
+          
+          <input 
+            v-model="newComplaint.category" 
+            placeholder="Category (e.g., 'Acoustic Annoyances')" 
+            required 
+          />
+
+          <textarea
+            v-model="newComplaint.detail"
+            placeholder="Be extremely specific..."
+            required
+          ></textarea>
+          
+          <button type="submit" class="submit-btn">Register Complaint</button>
         </form>
       </div>
     </div>
 
-    <h2>The Registry (Sorted by Specificity Score)</h2>
+    <h2>The Registry</h2>
+    <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input v-model="searchQuery" placeholder="Search complaints..." class="search-input" />
+    </div>
 
-    <div v-for="complaint in filteredComplaints" :key="complaint.id" class="complaint-card">
-      <div class="card-header">
-        <strong>{{ complaint.title }}</strong>
-        <span class="category-tag">{{ complaint.category_name }}</span>
+    <div
+      v-for="complaint in filteredComplaints"
+      :key="complaint.id"
+      class="complaint-card"
+    >
+      <div class="post-meta-header">
+        <div class="post-user-info">
+          <img :src="getImgUrl(complaint.complainer_pfp)" class="post-avatar" />
+          <span class="post-author">u/{{ complaint.complainer_name }}</span>
+        </div>
+        <span class="meta-separator">•</span>
+        <span class="category-pill">{{ complaint.category }}</span>
       </div>
-      <p>{{ complaint.detail }}</p>
+
+      <div class="card-content">
+        <h3 class="post-title">{{ complaint.title }}</h3>
+        <p class="post-body">{{ complaint.detail }}</p>
+      </div>
 
       <div class="card-footer">
-        <span class="score">Specificity Score: {{ complaint.specificity_score }}</span>
+        <span class="score-badge">Votes : {{ complaint.specificity_score }}</span>
         
-        <button 
-          v-if="user.role === 'complainer'" 
-          @click="upvoteComplaint(complaint)"
-        >
-          Upvote (+1 Specificity)
-        </button>
+        <div class="action-buttons">
+            <template v-if="user.role === 'complainer'">
+                <button @click="downvoteComplaint(complaint)" class="icon-btn upvote-btn" title="Downvote">▼ Downvote</button>
+                <button @click="upvoteComplaint(complaint)" class="icon-btn upvote-btn" title="Upvote">▲ Upvote</button>
+            </template>
 
-        <button 
-          v-if="user.role === 'complainer'" 
-          @click="DownvoteComplaint(complaint)"
-        >
-          Downvote (-1 Specificity)
-        </button>
+            <button
+              v-if="user.id === complaint.complainer_id && !editingComplaint"
+              @click="startEdit(complaint)"
+              class="icon-btn edit-btn"
+            >
+              Edit
+            </button>
 
-        <button 
-          v-if="user.id === complaint.complainer_id && !editingComplaint" 
-          @click="startEdit(complaint)"
-        >
-          Make More Specific (Edit)
-        </button>
-
-        <button 
-          v-if="user.role === 'archivist'" 
-          @click="deleteComplaint(complaint.id)"
-          class="delete-btn"
-        >
-          Archive (Delete)
-        </button>
+            <template v-if="user.role === 'archivist'">
+                <button @click="resetVote(complaint)" class="icon-btn reset-btn">Reset</button>
+                <button @click="deleteComplaint(complaint.id)" class="icon-btn delete-btn">Archive</button>
+            </template>
+        </div>
       </div>
-      
-      <div v-if="editingComplaint && editingComplaint.id === complaint.id" class="edit-form">
-          <h4>Edit Complaint</h4>
-          <input v-model="editingComplaint.title" placeholder="New Title" required />
-          <textarea v-model="editingComplaint.detail" placeholder="New Detail" required></textarea>
-          <select v-model="editingComplaint.category_id" required>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
-          <button @click="updateComplaint">Save</button>
-          <button @click="cancelEdit">Cancel</button>
+
+      <div
+        v-if="editingComplaint && editingComplaint.id === complaint.id"
+        class="edit-form"
+      >
+        <h4>Edit Complaint</h4>
+        <input v-model="editingComplaint.title" placeholder="New Title" required />
+        
+        <input 
+          v-model="editingComplaint.category" 
+          placeholder="New Category" 
+          required 
+        />
+        
+        <textarea
+          v-model="editingComplaint.detail"
+          placeholder="New Detail"
+          required
+        ></textarea>
+        
+        <div class="edit-actions">
+          <button @click="updateComplaint" class="save-btn">Save</button>
+          <button @click="cancelEdit" class="cancel-btn">Cancel</button>
+        </div>
       </div>
     </div>
 
-    <p v-if="!filteredComplaints.length">No complaints found matching your search.</p>
+    <p v-if="!filteredComplaints.length" class="empty-msg">No complaints found matching your search.</p>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
+// Import images
+import pfp1 from "@/assets/pfp_image/pfp1.jpeg";
+import pfp2 from "@/assets/pfp_image/pfp2.jpeg";
+import pfp3 from "@/assets/pfp_image/pfp3.jpeg";
+import pfp4 from "@/assets/pfp_image/pfp4.jpeg";
 
 export default {
-  name: 'ComplaintList',
-  props: ['user', 'token'],
+  name: "ComplaintList",
+  props: ["user", "token"],
   data() {
     return {
       complaints: [],
-      categories: [],
-      newComplaint: {
-        title: '',
-        detail: '',
-        category_id: '',
+      // categories: [], // REMOVED
+      users: [],
+      pfpMap: {
+        "pfp1.jpeg": pfp1,
+        "pfp2.jpeg": pfp2,
+        "pfp3.jpeg": pfp3,
+        "pfp4.jpeg": pfp4,
       },
-      editingComplaint: null, // Stores the complaint being edited
-      searchQuery: '',
+      newComplaint: {
+        title: "",
+        detail: "",
+        category: "", // Changed from category_id
+      },
+      editingComplaint: null,
+      searchQuery: "",
     };
   },
   computed: {
     filteredComplaints() {
-      // Filter by search query (case-insensitive on title/detail)
-      const filtered = this.complaints.filter(c =>
-        c.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        c.detail.toLowerCase().includes(this.searchQuery.toLowerCase())
+      const filtered = this.complaints.filter(
+        (c) =>
+          c.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          c.detail.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          c.category.toLowerCase().includes(this.searchQuery.toLowerCase()) // Added search by category
       );
-      // Sorting is already done server-side by specificity_score DESC, but we'll re-sort here just in case of local updates
       return filtered.sort((a, b) => b.specificity_score - a.specificity_score);
     },
-    // Axios instance with auth header
     api() {
-        return axios.create({
-            baseURL: 'http://localhost:3000/api',
-            headers: { 'Authorization': `Bearer ${this.token}` }
-        });
-    }
+      return axios.create({
+        baseURL: "http://localhost:3000/api",
+        headers: { Authorization: `Bearer ${this.token}` },
+      });
+    },
   },
   methods: {
-    async fetchCategories() {
-      try {
-        const response = await axios.get('http://localhost:3000/api/categories');
-        this.categories = response.data;
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    },
+    // REMOVED fetchCategories()
+    
     async fetchComplaints() {
       try {
-        const response = await axios.get('http://localhost:3000/api/complaints');
+        const response = await axios.get("http://localhost:3000/api/complaints");
         this.complaints = response.data;
       } catch (error) {
-        console.error('Error fetching complaints:', error);
+        console.error("Error fetching complaints:", error);
+      }
+    },
+    async fetchUsers() {
+      try {
+        const response = await axios.get("http://localhost:3000/api/users");
+        this.users = response.data;
+      } catch (error) {
+        console.error("Error fetching users:", error);
       }
     },
     async submitComplaint() {
       try {
-        await this.api.post('/complaints', this.newComplaint);
-        
-        // Reset form
-        this.newComplaint = { title: '', detail: '', category_id: '' };
-        
-        await this.fetchComplaints(); // Refresh list
+        await this.api.post("/complaints", this.newComplaint);
+        this.newComplaint = { title: "", detail: "", category: "" }; // Reset category string
+        await this.fetchComplaints();
       } catch (error) {
-        alert('Failed to submit complaint.');
-        console.error('Error submitting complaint:', error);
+        alert("Failed to submit complaint.");
       }
     },
+    // ... [Upvote, Downvote, Reset, Delete, Ban remain exactly the same] ...
+    
     async upvoteComplaint(complaint) {
       try {
         await this.api.put(`/complaints/upvote/${complaint.id}`);
-        
-        // Optimistically update the local score
         complaint.specificity_score++;
-        // Re-sort the array manually since the score changed
-        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score); 
-
-      } catch (error) {
-        alert('Failed to upvote complaint.');
-        console.error('Error upvoting complaint:', error);
-      }
+        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
+      } catch (error) { alert("Failed to upvote."); }
+    },
+    async downvoteComplaint(complaint) {
+      try {
+        await this.api.put(`/complaints/downvote/${complaint.id}`);
+        complaint.specificity_score--;
+        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
+      } catch (error) { alert("Failed to downvote."); }
+    },
+    async resetVote(complaint){
+      if (!confirm("Are you sure you want to reset the vote?")) return;
+      try {
+        await this.api.put(`/complaints/reset/${complaint.id}`);
+        complaint.specificity_score = 0;
+        this.fetchComplaints();
+      } catch(error){ alert("Failed to reset."); }
     },
     async DownvoteComplaint(complaint) {
       try {
@@ -175,123 +227,284 @@ export default {
       }
     },
     async deleteComplaint(id) {
-      if (!confirm("Are you sure the complaint is too generic and must be archived?")) return;
-      
+      if (!confirm("Archive this complaint?")) return;
       try {
         await this.api.delete(`/complaints/${id}`);
-        
-        // Remove from local array
-        this.complaints = this.complaints.filter(c => c.id !== id);
-      } catch (error) {
-        alert(error.response.data.message || 'Failed to delete complaint.');
-        console.error('Error deleting complaint:', error);
-      }
+        this.complaints = this.complaints.filter((c) => c.id !== id);
+      } catch (error) { alert("Failed to delete."); }
     },
+    async banUser(id) {
+      if (!confirm("Ban this user?")) return;
+      try {
+        await this.api.delete(`/users/delete/${id}`);
+        this.fetchUsers();
+        this.fetchComplaints();
+      } catch (error) { alert("Failed to ban."); }
+    },
+    
     startEdit(complaint) {
-      // Create a shallow copy for editing
-      this.editingComplaint = { ...complaint }; 
+      this.editingComplaint = { ...complaint };
     },
     cancelEdit() {
       this.editingComplaint = null;
     },
     async updateComplaint() {
-        try {
-            const { id, title, detail, category_id } = this.editingComplaint;
-
-            await this.api.put(`/complaints/${id}`, { title, detail, category_id });
-            
-            // Update the main array with the new data
-            const index = this.complaints.findIndex(c => c.id === id);
-            if (index !== -1) {
-                this.complaints[index].title = title;
-                this.complaints[index].detail = detail;
-                this.complaints[index].category_name = this.categories.find(c => c.id === category_id).name;
-            }
-            this.cancelEdit();
-        } catch (error) {
-            alert('Failed to update complaint. You can only edit your own complaints.');
-            console.error('Error updating complaint:', error);
+      try {
+        // Changed category_id to category
+        const { id, title, detail, category } = this.editingComplaint;
+        await this.api.put(`/complaints/${id}`, { title, detail, category });
+        
+        const index = this.complaints.findIndex((c) => c.id === id);
+        if (index !== -1) {
+          this.complaints[index].title = title;
+          this.complaints[index].detail = detail;
+          this.complaints[index].category = category; // Update local string
         }
-    }
+        this.cancelEdit();
+      } catch (error) {
+        alert("Failed to update complaint.");
+      }
+    },
+    getImgUrl(name) {
+        if(!name) return this.pfpMap["pfp1.jpeg"];
+        return this.pfpMap[name] || this.pfpMap["pfp1.jpeg"];
+    },
   },
   mounted() {
-    this.fetchCategories();
+    // Removed fetchCategories
     this.fetchComplaints();
+    this.fetchUsers();
   },
 };
 </script>
 
 <style scoped>
+/* Re-using your exact existing styles to maintain homogeneity */
 .complaint-list {
-  max-width: 800px;
+  max-width: 700px;
   margin: 0 auto;
+  padding-bottom: 40px;
 }
-.search-and-form {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
+
+/* --- Search & Form --- */
+.search-wrapper {
+  position: relative;
+  margin-bottom: 20px;
 }
-.search-and-form input {
-    padding: 10px;
-    width: 100%;
-    margin-bottom: 15px;
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e8e93;
 }
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
 .new-complaint-form {
-  border: 1px solid #ccc;
-  padding: 15px;
-  border-radius: 8px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  margin-bottom: 30px;
+  border: 1px solid #eee;
 }
-.new-complaint-form input, .new-complaint-form textarea, .new-complaint-form select {
-    display: block;
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-}
-.complaint-card {
-  border: 2px solid #2c3e50;
+.new-complaint-form input, 
+.new-complaint-form textarea, 
+.new-complaint-form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
   border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 15px;
-  text-align: left;
+  box-sizing: border-box;
+  font-family: inherit;
 }
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
+.submit-btn {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
 }
-.category-tag {
-    background-color: #3498db;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 0.8em;
+.submit-btn:hover { background-color: #005ecb; }
+
+/* --- Complaint Card --- */
+.complaint-card {
+  background: white;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: box-shadow 0.2s;
 }
+.complaint-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.post-meta-header {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #8e8e93;
+  margin-bottom: 8px;
+}
+
+.post-user-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1c1c1e;
+  font-weight: 600;
+}
+
+.post-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #eee;
+}
+
+.post-author {
+  color: #1c1c1e;
+}
+
+.meta-separator {
+  margin: 0 8px;
+  color: #c7c7cc;
+}
+
+.category-pill {
+  background-color: #f2f2f7;
+  color: #007aff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 11px;
+  /* Removed text-transform: uppercase to respect user typing */
+}
+
+/* Card Content */
+.post-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+}
+
+.post-body {
+  color: #3a3a3c;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+  font-size: 15px;
+}
+
+/* Footer & Buttons */
 .card-footer {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f2f2f7;
+  padding-top: 12px;
 }
-.score {
-    font-weight: bold;
-    color: #e74c3c;
+
+.score-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff2d55;
+  background-color: #fff0f2;
+  padding: 4px 10px;
+  border-radius: 10px;
 }
-.delete-btn {
-    background-color: #c0392b;
-    color: white;
-    border: none;
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
 }
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.upvote-btn { color: #007aff; }
+.upvote-btn:hover { background-color: #f0f8ff; }
+
+.reset-btn {color: #000;}
+.reset-btn:hover {background-color: #fff5ff;}
+
+.edit-btn { color: #ff9500; }
+.edit-btn:hover { background-color: #fff8eb; }
+
+.delete-btn { color: #ff3b30; }
+.delete-btn:hover { background-color: #fff0f0; }
+
+/* Edit Mode */
 .edit-form {
-    border-top: 1px solid #ddd;
-    margin-top: 10px;
-    padding-top: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
 }
-.edit-form input, .edit-form textarea, .edit-form select {
-    margin-bottom: 5px;
+.edit-form input, 
+.edit-form textarea, 
+.edit-form select {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
 }
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.save-btn {
+  background: #007aff; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+}
+.cancel-btn {
+  background: transparent; color: #8e8e93; border: none; cursor: pointer;
+}
+
+.list_user_title{
+  margin-bottom: 0px;
+}
+.list_user {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 60px;
+}
+.list_user > div {
+  background: white;
+  padding: 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eee;
+}
+.list_user img {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+}
+.list_user p { margin: 0; font-weight: 600; flex-grow: 1;}
+
 </style>

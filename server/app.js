@@ -4,11 +4,12 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const mysql = require("mysql2/promise"); // Using promise-based for async/await
+const mysql = require("mysql2/promise");
 
 const app = express();
 const port = 3000;
-const secretKey = "super-specific-complaint-secret"; // CHANGE THIS!
+const secretKey =
+  "pUrSrRoUH78bj7NkGf0b0nOtqgvvMytdjAqZ8s6db8YG9B59zvtLuLK60wA5tRJuKEEj32PF9n9ZoxBaMw6g79"; //generated using jwtsecretkeygenerator.com
 
 // Middleware
 app.use(cors());
@@ -73,21 +74,19 @@ function archivistOnly(req, res, next) {
 // Registration
 app.post("/api/register", async (req, res) => {
   try {
-    const { username, password, role } = req.body;
-    // Basic validation
-    if (!username || !password) {
+    const { username, password, role, email } = req.body; // Added email
+
+    // Validate email is present
+    if (!username || !password || !email) {
       return res
         .status(400)
-        .json({ message: "Username and password are required." });
+        .json({ message: "Username, email, and password are required." });
     }
 
-    // Ensure role is either 'complainer' or 'archivist', default to 'complainer'
     const userRole =
       role === "archivist" && username === "admin" ? "archivist" : "complainer";
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Check if username exists
     const [existing] = await dbPool.query(
       "SELECT id FROM users WHERE username = ?",
       [username]
@@ -96,9 +95,10 @@ app.post("/api/register", async (req, res) => {
       return res.status(409).json({ message: "Username already exists." });
     }
 
+    // Insert with email
     await dbPool.query(
-      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-      [username, hashedPassword, userRole]
+      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+      [username, email, hashedPassword, userRole]
     );
 
     res.status(201).json({ message: "Registration successful!" });
@@ -112,14 +112,13 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
     const [rows] = await dbPool.query(
       "SELECT * FROM users WHERE username = ?",
       [username]
     );
-    if (rows.length === 0) {
+
+    if (rows.length === 0)
       return res.status(404).json({ message: "User not found." });
-    }
 
     const user = rows[0];
     if (await bcrypt.compare(password, user.password)) {
@@ -127,7 +126,14 @@ app.post("/api/login", async (req, res) => {
       res.json({
         message: "Login successful!",
         token: token,
-        user: { id: user.id, username: user.username, role: user.role },
+        // Send email to frontend here
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          pfp: user.pfp,
+          email: user.email,
+        },
       });
     } else {
       res.status(401).json({ message: "Incorrect password." });
@@ -143,13 +149,13 @@ app.post("/api/login", async (req, res) => {
 // READ all complaints (including category and user info)
 app.get("/api/complaints", async (req, res) => {
   try {
+    // Removed JOIN categories, added c.category
     const query = `
             SELECT 
-                c.id, c.title, c.detail, c.specificity_score, c.created_at,
-                cat.name AS category_name,
-                u.username AS complainer_name, u.id AS complainer_id
+                c.id, c.title, c.detail, c.specificity_score, c.category, c.created_at,
+                u.username AS complainer_name, u.id AS complainer_id,
+                u.pfp AS complainer_pfp
             FROM complaints c
-            JOIN categories cat ON c.category_id = cat.id
             JOIN users u ON c.user_id = u.id
             ORDER BY c.specificity_score DESC, c.created_at DESC
         `;
@@ -161,19 +167,30 @@ app.get("/api/complaints", async (req, res) => {
   }
 });
 
+app.get("/api/users", async (req, res) => {
+  try {
+    const query = `SELECT id, username, pfp FROM users WHERE username != "admin"`;
+    const [users] = await dbPool.query(query);
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching users." });
+  }
+});
+
 // INSERT a new complaint (Complainer/Authenticated)
 app.post("/api/complaints", authenticateToken, async (req, res) => {
   try {
-    const { title, detail, category_id } = req.body;
-    const user_id = req.user.id; // Get user ID from the JWT payload
+    const { title, detail, category } = req.body; // Changed category_id to category
+    const user_id = req.user.id;
 
-    if (!title || !detail || !category_id) {
+    if (!title || !detail || !category) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
     const [result] = await dbPool.query(
-      "INSERT INTO complaints (title, detail, category_id, user_id) VALUES (?, ?, ?, ?)",
-      [title, detail, category_id, user_id]
+      "INSERT INTO complaints (title, detail, category, user_id) VALUES (?, ?, ?, ?)",
+      [title, detail, category, user_id]
     );
 
     res.status(201).json({
@@ -201,6 +218,32 @@ app.put("/api/complaints/upvote/:id", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Error upvoting complaint." });
   }
 });
+app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Simple increment
+    await dbPool.query(
+      "UPDATE complaints SET specificity_score = specificity_score - 1 WHERE id = ?",
+      [id]
+    );
+    res.json({ message: "Specificity score updated." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error upvoting complaint." });
+  }
+});
+
+app.put("/api/complaints/reset/:id", authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = "UPDATE complaints SET specificity_score = 0 WHERE id = ?";
+    await dbPool.query(query, [id]);
+    res.json({ message: "Specificity score reset. " });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error resetting score. " });
+  }
+});
 
 // UPDATE complaint specificity score (downvote) (Authenticated - Complainer)
 app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
@@ -222,10 +265,10 @@ app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
 app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
-    const { title, detail, category_id } = req.body;
+    const { title, detail, category } = req.body; // Changed category_id to category
     const user_id = req.user.id;
 
-    // 1. Check if the complaint belongs to the user
+    // 1. Check permissions
     const [complaint] = await dbPool.query(
       "SELECT user_id FROM complaints WHERE id = ?",
       [id]
@@ -238,13 +281,36 @@ app.put("/api/complaints/:id", authenticateToken, async (req, res) => {
 
     // 2. Perform the update
     await dbPool.query(
-      "UPDATE complaints SET title=?, detail=?, category_id=? WHERE id=?",
-      [title, detail, category_id, id]
+      "UPDATE complaints SET title=?, detail=?, category=? WHERE id=?",
+      [title, detail, category, id]
     );
     res.json({ message: "Complaint updated successfully." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error updating complaint." });
+  }
+});
+// UPDATE User Profile
+app.put("/api/users/profile", authenticateToken, async (req, res) => {
+  try {
+    const { username, pfp, email } = req.body; // Added email
+    const userId = req.user.id;
+
+    // Update query includes email now
+    const query =
+      "UPDATE users SET username = ?, email = ?, pfp = ? WHERE id = ?";
+    const params = [username, email, pfp, userId];
+
+    await dbPool.query(query, params);
+
+    res.json({
+      message: "Profile updated successfully",
+      // Return updated user object
+      user: { id: userId, username, role: req.user.role, pfp, email },
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Failed to update profile." });
   }
 });
 
@@ -265,20 +331,24 @@ app.delete(
   }
 );
 
-// --- CATEGORY READ ROUTE ---
-
-// READ all categories
-app.get("/api/categories", async (req, res) => {
-  try {
-    const [categories] = await dbPool.query(
-      "SELECT * FROM categories ORDER BY name"
-    );
-    res.json(categories);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching categories." });
+app.delete(
+  "/api/users/delete/:id",
+  authenticateToken,
+  archivistOnly,
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      const query1 = "DELETE FROM complaints WHERE user_id = ?";
+      const query2 = "DELETE FROM users WHERE id = ?";
+      await dbPool.query(query1, [id]);
+      await dbPool.query(query2, [id]);
+      res.json({ message: "User banned by Archivist." });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error banning user." });
+    }
   }
-});
+);
 
 // Start the server
 app.listen(port, () => {
