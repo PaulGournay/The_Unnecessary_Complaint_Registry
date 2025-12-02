@@ -112,16 +112,12 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log("username :");
-    console.log(username);
     let rows;
     if (username.includes('@')) {
       [rows] = await dbPool.query(
         "SELECT * FROM users WHERE email = ?",
         [username]
       );
-      console.log("username :");
-      console.log(username);
     } else {
       [rows] = await dbPool.query(
         "SELECT * FROM users WHERE username = ?",
