@@ -1,13 +1,12 @@
 <template>
   <div class="complaint-list">
-
     <div v-if="user.role === 'archivist'" class="list_user">
-        <h2 class="list_user_title">User List : </h2>
-        <div v-for="person in users" :key="person.id">
-          <img :src="getImgUrl(person.pfp)" alt="PFP" />
-          <p>{{ person.username }}</p>
-          <button @click="banUser(person.id)" class="icon-btn delete-btn">BAN</button>
-        </div>
+      <h2 class="list_user_title">User List :</h2>
+      <div v-for="person in users" :key="person.id">
+        <img :src="getImgUrl(person.pfp)" alt="PFP" />
+        <p>{{ person.username }}</p>
+        <button @click="banUser(person.id)" class="icon-btn delete-btn">BAN</button>
+      </div>
     </div>
 
     <div class="search-and-form">
@@ -15,11 +14,11 @@
         <h3>Submit a New Overly Specific Complaint</h3>
         <form @submit.prevent="submitComplaint">
           <input v-model="newComplaint.title" placeholder="Complaint Title" required />
-          
-          <input 
-            v-model="newComplaint.category" 
-            placeholder="Category (e.g., 'Acoustic Annoyances')" 
-            required 
+
+          <input
+            v-model="newComplaint.category"
+            placeholder="Category (e.g., 'Acoustic Annoyances')"
+            required
           />
 
           <textarea
@@ -27,7 +26,7 @@
             placeholder="Be extremely specific..."
             required
           ></textarea>
-          
+
           <button type="submit" class="submit-btn">Register Complaint</button>
         </form>
       </div>
@@ -35,8 +34,12 @@
 
     <h2>The Registry</h2>
     <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
-        <input v-model="searchQuery" placeholder="Search complaints..." class="search-input" />
+      <span class="search-icon">🔍</span>
+      <input
+        v-model="searchQuery"
+        placeholder="Search complaints..."
+        class="search-input"
+      />
     </div>
 
     <div
@@ -60,25 +63,44 @@
 
       <div class="card-footer">
         <span class="score-badge">Votes : {{ complaint.specificity_score }}</span>
-        
-        <div class="action-buttons">
-            <template v-if="user.role === 'complainer'">
-                <button @click="downvoteComplaint(complaint)" class="icon-btn upvote-btn" title="Downvote">▼ Downvote</button>
-                <button @click="upvoteComplaint(complaint)" class="icon-btn upvote-btn" title="Upvote">▲ Upvote</button>
-            </template>
 
+        <div class="action-buttons">
+          <template v-if="user.role === 'complainer'">
             <button
-              v-if="user.id === complaint.complainer_id && !editingComplaint"
-              @click="startEdit(complaint)"
-              class="icon-btn edit-btn"
+              @click="downvoteComplaint(complaint)"
+              class="icon-btn upvote-btn"
+              :class="{ 'active-vote': complaint.user_vote === 'down' }"
+              title="Downvote"
             >
-              Edit
+              Downvote ▼
             </button>
 
-            <template v-if="user.role === 'archivist'">
-                <button @click="resetVote(complaint)" class="icon-btn reset-btn">Reset</button>
-                <button @click="deleteComplaint(complaint.id)" class="icon-btn delete-btn">Archive</button>
-            </template>
+            <button
+              @click="upvoteComplaint(complaint)"
+              class="icon-btn upvote-btn"
+              :class="{ 'active-vote': complaint.user_vote === 'up' }"
+              title="Upvote"
+            >
+              Upvote ▲
+            </button>
+          </template>
+
+          <button
+            v-if="user.id === complaint.complainer_id && !editingComplaint"
+            @click="startEdit(complaint)"
+            class="icon-btn edit-btn"
+          >
+            Edit
+          </button>
+
+          <template v-if="user.role === 'archivist'">
+            <button @click="resetVote(complaint)" class="icon-btn reset-btn">
+              Reset
+            </button>
+            <button @click="deleteComplaint(complaint.id)" class="icon-btn delete-btn">
+              Archive
+            </button>
+          </template>
         </div>
       </div>
 
@@ -88,19 +110,15 @@
       >
         <h4>Edit Complaint</h4>
         <input v-model="editingComplaint.title" placeholder="New Title" required />
-        
-        <input 
-          v-model="editingComplaint.category" 
-          placeholder="New Category" 
-          required 
-        />
-        
+
+        <input v-model="editingComplaint.category" placeholder="New Category" required />
+
         <textarea
           v-model="editingComplaint.detail"
           placeholder="New Detail"
           required
         ></textarea>
-        
+
         <div class="edit-actions">
           <button @click="updateComplaint" class="save-btn">Save</button>
           <button @click="cancelEdit" class="cancel-btn">Cancel</button>
@@ -108,7 +126,9 @@
       </div>
     </div>
 
-    <p v-if="!filteredComplaints.length" class="empty-msg">No complaints found matching your search.</p>
+    <p v-if="!filteredComplaints.length" class="empty-msg">
+      No complaints found matching your search.
+    </p>
   </div>
 </template>
 
@@ -161,11 +181,9 @@ export default {
     },
   },
   methods: {
-    // REMOVED fetchCategories()
-    
     async fetchComplaints() {
       try {
-        const response = await axios.get("http://localhost:3000/api/complaints");
+        const response = await this.api.get("/complaints");
         this.complaints = response.data;
       } catch (error) {
         console.error("Error fetching complaints:", error);
@@ -189,41 +207,75 @@ export default {
       }
     },
     // ... [Upvote, Downvote, Reset, Delete, Ban remain exactly the same] ...
-    
+
     async upvoteComplaint(complaint) {
+      // Prevent duplicate clicks locally
+      if (complaint.user_vote === "up") return;
+
       try {
         await this.api.put(`/complaints/upvote/${complaint.id}`);
-        complaint.specificity_score++;
-        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
-      } catch (error) { alert("Failed to upvote."); }
+
+        // Optimistic UI Update
+        if (complaint.user_vote === "down") {
+          complaint.specificity_score += 2; // Swap
+        } else {
+          complaint.specificity_score += 1; // New
+        }
+        complaint.user_vote = "up"; // Set state
+
+        this.sortComplaints(); // Helper to re-sort list
+      } catch (error) {
+        console.error(error);
+      }
     },
+
     async downvoteComplaint(complaint) {
+      if (complaint.user_vote === "down") return;
+
       try {
         await this.api.put(`/complaints/downvote/${complaint.id}`);
-        complaint.specificity_score--;
-        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
-      } catch (error) { alert("Failed to downvote."); }
+
+        if (complaint.user_vote === "up") {
+          complaint.specificity_score -= 2;
+        } else {
+          complaint.specificity_score -= 1;
+        }
+        complaint.user_vote = "down";
+
+        this.sortComplaints();
+      } catch (error) {
+        console.error(error);
+      }
     },
-    async resetVote(complaint){
-      if (!confirm("Are you sure you want to reset the vote?")) return;
+    async resetVote(complaint) {
+      if (!confirm("Are you sure you want to reset the score and voting history?"))
+        return;
+
       try {
         await this.api.put(`/complaints/reset/${complaint.id}`);
-        complaint.specificity_score = 0;
-        this.fetchComplaints();
-      } catch(error){ alert("Failed to reset."); }
+
+        // UI Updates:
+        complaint.specificity_score = 0; // Reset score number
+        complaint.user_vote = null; // IMPORTANT: Reset the user's vote status so they can vote again
+
+        // Optional: Reload fresh data to be safe
+        // this.fetchComplaints();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to reset.");
+      }
     },
     async DownvoteComplaint(complaint) {
       try {
         await this.api.put(`/complaints/downvote/${complaint.id}`);
-        
+
         // Optimistically update the local score
         complaint.specificity_score--;
         // Re-sort the array manually since the score changed
-        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score); 
-
+        this.complaints.sort((a, b) => b.specificity_score - a.specificity_score);
       } catch (error) {
-        alert('Failed to downvote complaint.');
-        console.error('Error downvoting complaint:', error);
+        alert("Failed to downvote complaint.");
+        console.error("Error downvoting complaint:", error);
       }
     },
     async deleteComplaint(id) {
@@ -231,17 +283,30 @@ export default {
       try {
         await this.api.delete(`/complaints/${id}`);
         this.complaints = this.complaints.filter((c) => c.id !== id);
-      } catch (error) { alert("Failed to delete."); }
+      } catch (error) {
+        alert("Failed to delete.");
+      }
     },
     async banUser(id) {
-      if (!confirm("Ban this user?")) return;
+      if (
+        !confirm(
+          "Are you sure? This will delete the user, their complaints, and their votes."
+        )
+      )
+        return;
+
       try {
         await this.api.delete(`/users/delete/${id}`);
-        this.fetchUsers();
-        this.fetchComplaints();
-      } catch (error) { alert("Failed to ban."); }
+
+        // Refresh both lists to remove the banned user's content
+        await this.fetchUsers();
+        await this.fetchComplaints();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to ban user.");
+      }
     },
-    
+
     startEdit(complaint) {
       this.editingComplaint = { ...complaint };
     },
@@ -253,7 +318,7 @@ export default {
         // Changed category_id to category
         const { id, title, detail, category } = this.editingComplaint;
         await this.api.put(`/complaints/${id}`, { title, detail, category });
-        
+
         const index = this.complaints.findIndex((c) => c.id === id);
         if (index !== -1) {
           this.complaints[index].title = title;
@@ -266,8 +331,8 @@ export default {
       }
     },
     getImgUrl(name) {
-        if(!name) return this.pfpMap["pfp1.jpeg"];
-        return this.pfpMap[name] || this.pfpMap["pfp1.jpeg"];
+      if (!name) return this.pfpMap["pfp1.jpeg"];
+      return this.pfpMap[name] || this.pfpMap["pfp1.jpeg"];
     },
   },
   mounted() {
@@ -312,12 +377,12 @@ export default {
   background: white;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
   border: 1px solid #eee;
 }
-.new-complaint-form input, 
-.new-complaint-form textarea, 
+.new-complaint-form input,
+.new-complaint-form textarea,
 .new-complaint-form select {
   width: 100%;
   padding: 10px;
@@ -337,7 +402,9 @@ export default {
   font-weight: 600;
   width: 100%;
 }
-.submit-btn:hover { background-color: #005ecb; }
+.submit-btn:hover {
+  background-color: #005ecb;
+}
 
 /* --- Complaint Card --- */
 .complaint-card {
@@ -349,7 +416,7 @@ export default {
   transition: box-shadow 0.2s;
 }
 .complaint-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .post-meta-header {
@@ -445,17 +512,33 @@ export default {
   transition: background 0.2s;
 }
 
-.upvote-btn { color: #007aff; }
-.upvote-btn:hover { background-color: #f0f8ff; }
+.upvote-btn {
+  color: #007aff;
+}
+.upvote-btn:hover {
+  background-color: #f0f8ff;
+}
 
-.reset-btn {color: #000;}
-.reset-btn:hover {background-color: #fff5ff;}
+.reset-btn {
+  color: #000;
+}
+.reset-btn:hover {
+  background-color: #fff5ff;
+}
 
-.edit-btn { color: #ff9500; }
-.edit-btn:hover { background-color: #fff8eb; }
+.edit-btn {
+  color: #ff9500;
+}
+.edit-btn:hover {
+  background-color: #fff8eb;
+}
 
-.delete-btn { color: #ff3b30; }
-.delete-btn:hover { background-color: #fff0f0; }
+.delete-btn {
+  color: #ff3b30;
+}
+.delete-btn:hover {
+  background-color: #fff0f0;
+}
 
 /* Edit Mode */
 .edit-form {
@@ -463,8 +546,8 @@ export default {
   padding-top: 15px;
   border-top: 1px solid #eee;
 }
-.edit-form input, 
-.edit-form textarea, 
+.edit-form input,
+.edit-form textarea,
 .edit-form select {
   width: 100%;
   margin-bottom: 8px;
@@ -478,13 +561,21 @@ export default {
   justify-content: flex-end;
 }
 .save-btn {
-  background: #007aff; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 .cancel-btn {
-  background: transparent; color: #8e8e93; border: none; cursor: pointer;
+  background: transparent;
+  color: #8e8e93;
+  border: none;
+  cursor: pointer;
 }
 
-.list_user_title{
+.list_user_title {
   margin-bottom: 0px;
 }
 .list_user {
@@ -503,8 +594,22 @@ export default {
   border: 1px solid #eee;
 }
 .list_user img {
-  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
 }
-.list_user p { margin: 0; font-weight: 600; flex-grow: 1;}
-
+.list_user p {
+  margin: 0;
+  font-weight: 600;
+  flex-grow: 1;
+}
+.active-vote {
+  background-color: #007aff;
+  color: white !important;
+  border-radius: 6px;
+}
+.active-vote:hover {
+  background-color: #005ecb;
+}
 </style>

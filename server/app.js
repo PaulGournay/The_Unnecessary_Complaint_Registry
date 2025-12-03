@@ -113,19 +113,15 @@ app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     let rows;
-    if (username.includes('@')) {
-      [rows] = await dbPool.query(
-        "SELECT * FROM users WHERE email = ?",
-        [username]
-      );
+    if (username.includes("@")) {
+      [rows] = await dbPool.query("SELECT * FROM users WHERE email = ?", [
+        username,
+      ]);
     } else {
-      [rows] = await dbPool.query(
-        "SELECT * FROM users WHERE username = ?",
-        [username]
-      );
+      [rows] = await dbPool.query("SELECT * FROM users WHERE username = ?", [
+        username,
+      ]);
     }
-
-
 
     if (rows.length === 0)
       return res.status(404).json({ message: "User not found." });
@@ -159,17 +155,35 @@ app.post("/api/login", async (req, res) => {
 // READ all complaints (including category and user info)
 app.get("/api/complaints", async (req, res) => {
   try {
-    // Removed JOIN categories, added c.category
+    let currentUserId = null;
+
+    // 1. Manually check for token to get user ID
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    // IMPORTANT: You need to require 'jsonwebtoken' and 'secretKey' at top of file
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, secretKey);
+        currentUserId = decoded.id;
+      } catch (err) {
+        /* invalid token, ignore */
+      }
+    }
+
+    // 2. Query joins with 'complaint_votes' to see if THIS user voted
     const query = `
             SELECT 
                 c.id, c.title, c.detail, c.specificity_score, c.category, c.created_at,
-                u.username AS complainer_name, u.id AS complainer_id,
-                u.pfp AS complainer_pfp
+                u.username AS complainer_name, u.id AS complainer_id, u.pfp AS complainer_pfp,
+                cv.vote_type AS user_vote
             FROM complaints c
             JOIN users u ON c.user_id = u.id
+            LEFT JOIN complaint_votes cv ON c.id = cv.complaint_id AND cv.user_id = ?
             ORDER BY c.specificity_score DESC, c.created_at DESC
         `;
-    const [complaints] = await dbPool.query(query);
+
+    const [complaints] = await dbPool.query(query, [currentUserId]);
     res.json(complaints);
   } catch (error) {
     console.error(error);
@@ -213,47 +227,119 @@ app.post("/api/complaints", authenticateToken, async (req, res) => {
   }
 });
 
-// UPDATE complaint specificity score (Upvote) (Authenticated - Complainer)
 app.put("/api/complaints/upvote/:id", authenticateToken, async (req, res) => {
   try {
-    const id = req.params.id;
-    // Simple increment
-    await dbPool.query(
-      "UPDATE complaints SET specificity_score = specificity_score + 1 WHERE id = ?",
-      [id]
+    const complaintId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if vote exists
+    const [existing] = await dbPool.query(
+      "SELECT vote_type FROM complaint_votes WHERE user_id = ? AND complaint_id = ?",
+      [userId, complaintId]
     );
-    res.json({ message: "Specificity score updated." });
+
+    if (existing.length === 0) {
+      // Case 1: No previous vote -> Insert Upvote (+1)
+      await dbPool.query(
+        "INSERT INTO complaint_votes (user_id, complaint_id, vote_type) VALUES (?, ?, 'up')",
+        [userId, complaintId]
+      );
+      await dbPool.query(
+        "UPDATE complaints SET specificity_score = specificity_score + 1 WHERE id = ?",
+        [complaintId]
+      );
+      return res.json({ message: "Upvoted", action: "added" });
+    }
+
+    if (existing[0].vote_type === "down") {
+      // Case 2: Was Downvoted -> Switch to Upvote (+2)
+      await dbPool.query(
+        "UPDATE complaint_votes SET vote_type = 'up' WHERE user_id = ? AND complaint_id = ?",
+        [userId, complaintId]
+      );
+      await dbPool.query(
+        "UPDATE complaints SET specificity_score = specificity_score + 2 WHERE id = ?",
+        [complaintId]
+      );
+      return res.json({ message: "Vote changed to up", action: "swapped" });
+    }
+
+    // Case 3: Already Upvoted -> Do nothing (or remove vote if you prefer toggle)
+    return res.status(400).json({ message: "You already upvoted this." });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error upvoting complaint." });
+    res.status(500).json({ message: "Error processing vote." });
   }
 });
 app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
   try {
-    const id = req.params.id;
-    // Simple increment
-    await dbPool.query(
-      "UPDATE complaints SET specificity_score = specificity_score - 1 WHERE id = ?",
-      [id]
+    const complaintId = req.params.id;
+    const userId = req.user.id;
+
+    const [existing] = await dbPool.query(
+      "SELECT vote_type FROM complaint_votes WHERE user_id = ? AND complaint_id = ?",
+      [userId, complaintId]
     );
-    res.json({ message: "Specificity score updated." });
+
+    if (existing.length === 0) {
+      // Case 1: No previous vote -> Insert Downvote (-1)
+      await dbPool.query(
+        "INSERT INTO complaint_votes (user_id, complaint_id, vote_type) VALUES (?, ?, 'down')",
+        [userId, complaintId]
+      );
+      await dbPool.query(
+        "UPDATE complaints SET specificity_score = specificity_score - 1 WHERE id = ?",
+        [complaintId]
+      );
+      return res.json({ message: "Downvoted", action: "added" });
+    }
+
+    if (existing[0].vote_type === "up") {
+      // Case 2: Was Upvoted -> Switch to Downvote (-2)
+      await dbPool.query(
+        "UPDATE complaint_votes SET vote_type = 'down' WHERE user_id = ? AND complaint_id = ?",
+        [userId, complaintId]
+      );
+      await dbPool.query(
+        "UPDATE complaints SET specificity_score = specificity_score - 2 WHERE id = ?",
+        [complaintId]
+      );
+      return res.json({ message: "Vote changed to down", action: "swapped" });
+    }
+
+    return res.status(400).json({ message: "You already downvoted this." });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error upvoting complaint." });
+    res.status(500).json({ message: "Error processing vote." });
   }
 });
 
-app.put("/api/complaints/reset/:id", authenticateToken, async (req, res) => {
-  try {
-    const id = req.params.id;
-    const query = "UPDATE complaints SET specificity_score = 0 WHERE id = ?";
-    await dbPool.query(query, [id]);
-    res.json({ message: "Specificity score reset. " });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error resetting score. " });
+app.put(
+  "/api/complaints/reset/:id",
+  authenticateToken,
+  archivistOnly,
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      // Step 1: Delete all voting records for this complaint
+      await dbPool.query("DELETE FROM complaint_votes WHERE complaint_id = ?", [
+        id,
+      ]);
+
+      // Step 2: Set score to 0
+      await dbPool.query(
+        "UPDATE complaints SET specificity_score = 0 WHERE id = ?",
+        [id]
+      );
+
+      res.json({ message: "Specificity score and voting history reset." });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error resetting score." });
+    }
   }
-});
+);
 
 // UPDATE complaint specificity score (downvote) (Authenticated - Complainer)
 app.put("/api/complaints/downvote/:id", authenticateToken, async (req, res) => {
@@ -326,17 +412,27 @@ app.put("/api/users/profile", authenticateToken, async (req, res) => {
 
 // DELETE a complaint (Archivist only)
 app.delete(
-  "/api/complaints/:id",
+  "/api/users/delete/:id",
   authenticateToken,
   archivistOnly,
   async (req, res) => {
     try {
       const id = req.params.id;
-      await dbPool.query("DELETE FROM complaints WHERE id = ?", [id]);
-      res.json({ message: "Complaint deleted by Archivist." });
+
+      // Step 1: Delete votes this user cast on OTHER complaints
+      await dbPool.query("DELETE FROM complaint_votes WHERE user_id = ?", [id]);
+
+      // Step 2: Delete complaints created by this user
+      // (Note: This will cascade delete votes ON these complaints due to SQL constraints)
+      await dbPool.query("DELETE FROM complaints WHERE user_id = ?", [id]);
+
+      // Step 3: Delete the user account
+      await dbPool.query("DELETE FROM users WHERE id = ?", [id]);
+
+      res.json({ message: "User banned and all associated data removed." });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Error deleting complaint." });
+      res.status(500).json({ message: "Error banning user." });
     }
   }
 );

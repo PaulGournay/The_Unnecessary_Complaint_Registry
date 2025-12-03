@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : mar. 02 déc. 2025 à 06:43
+-- Généré le : mer. 03 déc. 2025 à 09:38
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -42,17 +42,65 @@ CREATE TABLE `complaints` (
 --
 
 INSERT INTO `complaints` (`id`, `title`, `detail`, `specificity_score`, `user_id`, `created_at`, `category`) VALUES
-(2, 'The Thumbprint Traitor', 'Description: After cleaning your phone screen to crystal clarity, you immediately manage to touch the glass with the one finger that is slightly greasy, leaving a perfect, unmistakable spiral-shaped fingerprint that catches the light right over the clock widget.', 1, 1, '2025-11-17 02:28:38', 'Existential Dread of Laundry'),
-(6, 'The Microscopic \"X\"', 'Mobile game ads where the \"Close\" button is not only the size of a singular pixel but is also a fake button that opens the App Store instead.', 95, 1, '2025-11-30 08:50:47', 'Digital Deception'),
-(7, 'The Phantom Flush', 'Automatic toilets that flush aggressively while I am still sitting on them, simply because I leaned forward two inches to check my phone.', 78, 3, '2025-11-30 08:50:47', 'Bathroom Betrayals'),
-(8, 'The Escalator Blockade', 'People who reach the top of an escalator and immediately stop to look around, causing a pile-up of human bodies behind them like a slow-motion train wreck.', 112, 5, '2025-11-30 08:50:47', 'Social Protocol'),
-(9, 'Recipe Life Stories', 'Food blogs that require me to scroll past 4,000 words about the author’s grandmother’s summer in Tuscany before telling me how many eggs to put in the cake.', 60, 4, '2025-11-30 08:50:47', 'Internet Clutter'),
-(10, 'The Wet Sock Step', 'Stepping into a small, invisible puddle of water in the kitchen while wearing fresh socks. The day is ruined. I might as well go back to bed.', 88, 1, '2025-11-30 08:50:47', 'Sensory Nightmares'),
-(11, 'Bagging Area Gaslighting', 'The self-checkout machine yelling \"UNEXPECTED ITEM IN BAGGING AREA\" when the only thing I placed there was the item I just scanned. I am not a thief, I am just trying to buy pasta.', 45, 3, '2025-11-30 08:50:47', 'Tech Hostility'),
-(12, 'The Streaming Volume War', 'Action movies where the dialogue is whispered so quietly I need subtitles, but the explosions are loud enough to shatter my windows.', 130, 5, '2025-11-30 08:50:47', 'Audio Crimes'),
-(13, 'The Fitted Sheet Paradox', 'The inability to fold a fitted sheet. It becomes a ball of elastic shame that I shove into the back of the linen closet hoping guests never see it.', 33, 4, '2025-11-30 08:50:47', 'Domestic Defeats'),
-(14, 'The \"K\" Response', 'Sending a detailed, three-paragraph text message pouring my heart out, only to receive the letter \"k\" in response.', 72, 1, '2025-11-30 08:50:47', 'Communication Breakdown'),
-(15, 'The Never-Ending Wipe', 'The Marker syndrome. I wipe and I wipe and I wipe, but the marker keeps marking. It is like there is a crayon down there.', 99, 3, '2025-11-30 08:50:47', 'Biological Betrayals');
+(2, 'The Thumbprint Traitor', 'Description: After cleaning your phone screen to crystal clarity, you immediately manage to touch the glass with the one finger that is slightly greasy, leaving a perfect, unmistakable spiral-shaped fingerprint that catches the light right over the clock widget.', 3, 1, '2025-11-17 02:28:38', 'Existential Dread of Laundry'),
+(6, 'The Microscopic \"X\"', 'Mobile game ads where the \"Close\" button is not only the size of a singular pixel but is also a fake button that opens the App Store instead.', 0, 1, '2025-11-30 08:50:47', 'Digital Deception'),
+(7, 'The Phantom Flush', 'Automatic toilets that flush aggressively while I am still sitting on them, simply because I leaned forward two inches to check my phone.', 1, 3, '2025-11-30 08:50:47', 'Bathroom Betrayals'),
+(8, 'The Escalator Blockade', 'People who reach the top of an escalator and immediately stop to look around, causing a pile-up of human bodies behind them like a slow-motion train wreck.', 3, 5, '2025-11-30 08:50:47', 'Social Protocol'),
+(9, 'Recipe Life Stories', 'Food blogs that require me to scroll past 4,000 words about the author’s grandmother’s summer in Tuscany before telling me how many eggs to put in the cake.', -1, 4, '2025-11-30 08:50:47', 'Internet Clutter'),
+(10, 'The Wet Sock Step', 'Stepping into a small, invisible puddle of water in the kitchen while wearing fresh socks. The day is ruined. I might as well go back to bed.', -2, 1, '2025-11-30 08:50:47', 'Sensory Nightmares'),
+(11, 'Bagging Area Gaslighting', 'The self-checkout machine yelling \"UNEXPECTED ITEM IN BAGGING AREA\" when the only thing I placed there was the item I just scanned. I am not a thief, I am just trying to buy pasta.', -2, 3, '2025-11-30 08:50:47', 'Tech Hostility'),
+(12, 'The Streaming Volume War', 'Action movies where the dialogue is whispered so quietly I need subtitles, but the explosions are loud enough to shatter my windows.', 1, 5, '2025-11-30 08:50:47', 'Audio Crimes'),
+(13, 'The Fitted Sheet Paradox', 'The inability to fold a fitted sheet. It becomes a ball of elastic shame that I shove into the back of the linen closet hoping guests never see it.', -4, 4, '2025-11-30 08:50:47', 'Domestic Defeats'),
+(14, 'The \"K\" Response', 'Sending a detailed, three-paragraph text message pouring my heart out, only to receive the letter \"k\" in response.', 0, 1, '2025-11-30 08:50:47', 'Communication Breakdown'),
+(15, 'The Never-Ending Wipe', 'The Marker syndrome. I wipe and I wipe and I wipe, but the marker keeps marking. It is like there is a crayon down there.', -1, 3, '2025-11-30 08:50:47', 'Biological Betrayals');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `complaint_votes`
+--
+
+CREATE TABLE `complaint_votes` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `complaint_id` int(11) NOT NULL,
+  `vote_type` enum('up','down') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `complaint_votes`
+--
+
+INSERT INTO `complaint_votes` (`id`, `user_id`, `complaint_id`, `vote_type`) VALUES
+(1, 1, 12, 'up'),
+(2, 1, 6, 'up'),
+(3, 1, 8, 'up'),
+(4, 1, 15, 'up'),
+(5, 1, 10, 'down'),
+(6, 1, 7, 'up'),
+(7, 1, 14, 'up'),
+(8, 1, 9, 'down'),
+(9, 1, 11, 'down'),
+(10, 1, 13, 'down'),
+(11, 1, 2, 'up'),
+(12, 3, 2, 'up'),
+(13, 3, 6, 'up'),
+(14, 3, 8, 'up'),
+(15, 3, 10, 'down'),
+(16, 3, 12, 'up'),
+(17, 3, 14, 'up'),
+(18, 4, 6, 'down'),
+(19, 4, 7, 'up'),
+(20, 4, 9, 'up'),
+(21, 4, 15, 'down'),
+(22, 5, 2, 'up'),
+(23, 5, 8, 'up'),
+(24, 5, 10, 'up'),
+(25, 5, 13, 'down'),
+(38, 4, 13, 'down'),
+(39, 4, 8, 'up'),
+(40, 4, 2, 'up'),
+(41, 4, 14, 'down');
 
 -- --------------------------------------------------------
 
@@ -120,6 +168,14 @@ ALTER TABLE `complaints`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Index pour la table `complaint_votes`
+--
+ALTER TABLE `complaint_votes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_vote` (`user_id`,`complaint_id`),
+  ADD KEY `complaint_id` (`complaint_id`);
+
+--
 -- Index pour la table `contact_messages`
 --
 ALTER TABLE `contact_messages`
@@ -143,6 +199,12 @@ ALTER TABLE `complaints`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT pour la table `complaint_votes`
+--
+ALTER TABLE `complaint_votes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+
+--
 -- AUTO_INCREMENT pour la table `contact_messages`
 --
 ALTER TABLE `contact_messages`
@@ -152,7 +214,7 @@ ALTER TABLE `contact_messages`
 -- AUTO_INCREMENT pour la table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Contraintes pour les tables déchargées
@@ -163,6 +225,13 @@ ALTER TABLE `users`
 --
 ALTER TABLE `complaints`
   ADD CONSTRAINT `complaints_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Contraintes pour la table `complaint_votes`
+--
+ALTER TABLE `complaint_votes`
+  ADD CONSTRAINT `complaint_votes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `complaint_votes_ibfk_2` FOREIGN KEY (`complaint_id`) REFERENCES `complaints` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
